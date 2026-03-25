@@ -291,8 +291,10 @@
                 updateCursor();
             }
             
-            // 鼠标滚轮缩放
+            // 鼠标滚轮缩放（需要按住Alt键）
             viewerImage.addEventListener('wheel', (e) => {
+                if (!e.altKey) return; // 只有按住Alt键时才能缩放
+                
                 e.preventDefault();
                 
                 if (e.deltaY< 0) {
