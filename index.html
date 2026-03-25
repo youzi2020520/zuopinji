@@ -275,16 +275,13 @@
             let isDragging = false;
             let startX, startY;
             let translateX = 0, translateY = 0;
-            let isAltPressed = false;
             
             // 更新鼠标指针样式
             function updateCursor() {
                 if (isDragging) {
                     viewerImage.style.cursor = 'grabbing';
-                } else if (isAltPressed) {
+                } else if (scale > 1) {
                     viewerImage.style.cursor = 'grab';
-                } else if (scale > doubleScale) {
-                    viewerImage.style.cursor = 'zoom-out';
                 } else {
                     viewerImage.style.cursor = 'zoom-in';
                 }
@@ -296,10 +293,8 @@
                 updateCursor();
             }
             
-            // 鼠标滚轮缩放（需要按住Alt键）
+            // 鼠标滚轮缩放（直接缩放，无需Alt键）
             viewerImage.addEventListener('wheel', (e) => {
-                if (!e.altKey) return; // 只有按住Alt键时才能缩放
-                
                 e.preventDefault();
                 
                 if (e.deltaY< 0) {
@@ -314,7 +309,7 @@
             });
             
             // 双击图片：按照最大视窗展示
-            viewerImage.addEventListener('dblclick', (e) => {
+            viewerImage.addEventListener('dblclick', (e) =>{
                 e.stopPropagation();
                 
                 if (scale > 1) {
@@ -330,25 +325,8 @@
                 updateImageTransform();
             });
             
-            // Alt键检测
-            document.addEventListener('keydown', (e) => {
-                if (e.altKey) {
-                    isAltPressed = true;
-                    updateCursor();
-                }
-            });
-            
-            document.addEventListener('keyup', (e) => {
-                if (!e.altKey) {
-                    isAltPressed = false;
-                    updateCursor();
-                }
-            });
-            
-            // 鼠标按下开始拖动（需要Alt键+鼠标左键组合）
+            // 鼠标按下开始拖动（直接拖动，无需Alt键）
             viewerImage.addEventListener('mousedown', (e) => {
-                if (!isAltPressed) return; // 只有按住Alt键时才能拖动
-                
                 isDragging = true;
                 startX = e.clientX - translateX;
                 startY = e.clientY - translateY;
