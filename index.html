@@ -164,16 +164,84 @@
                 <div class="photo-entry flex flex-col items-center" style="margin-bottom: ${currentSpacing}px">
                     <div class="relative w-full max-w-4xl overflow-hidden img-placeholder" ondblclick="openViewer(${index})">
                         <img 
-                            src="${item.url}" 
-                            class="w-full h-auto object-contain block opacity-0 transition-opacity duration-700" 
-                            loading="eager"
+                            data-src="${item.url}" 
+                            class="w-full h-auto object-contain block opacity-0 transition-opacity duration-700 lazy-image" 
                             onload="this.classList.remove('opacity-0'); this.parentElement.classList.remove('img-placeholder');"
-                            onerror="this.parentElement.innerHTML = '<div class=\"flex items-center justify-center h-full text-white/50\">加载失败</div>';"
+                            onerror="handleImageError(this, '${item.url}', ${index});"
                         >
                     </div>
                 </div>
             `).join('');
+            
+            // 启动延迟加载
+            loadImagesSequentially();
         }
+
+        // 顺序加载图片，避免同时加载太多导致失败
+        function loadImagesSequentially() {
+            const images = document.querySelectorAll('.lazy-image');
+            let index = 0;
+            
+            function loadNext() {
+                if (index< images.length) {
+                    const img = images[index];
+                    img.src = img.dataset.src;
+                    img.onload = () =>{
+                        img.classList.remove('opacity-0');
+                        img.parentElement.classList.remove('img-placeholder');
+                        index++;
+                        setTimeout(loadNext, 100); // 每100ms加载一张图片
+                    };
+                    img.onerror = () =>{
+                        handleImageError(img, img.dataset.src, index);
+                        index++;
+                        setTimeout(loadNext, 100);
+                    };
+                }
+            }
+            
+            loadNext();
+        }
+
+        // 图片加载错误处理和重试机制
+        window.handleImageError = (img, url, index) => {
+            const container = img.parentElement;
+            const retryCount = img.retryCount || 0;
+            
+            if (retryCount< 3) {
+                // 第一次重试：使用随机延迟
+                img.retryCount = retryCount + 1;
+                setTimeout(() =>{
+                    img.src = url; // 重新加载图片
+                }, 1000 * (retryCount + 1));
+            } else {
+                // 重试失败，显示错误信息
+                container.innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-full text-white/50 p-8">
+                        <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
+                        <p class="text-sm">图片加载失败</p>
+                        <button onclick="retryImage(${index})" class="mt-4 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-full text-xs transition-colors">
+                            重试加载
+                        </button>
+                    </div>
+                `;
+            }
+        };
+
+        // 手动重试加载图片
+        window.retryImage = (index) =>{
+            const item = portfolioItems[index];
+            const container = document.querySelectorAll('.photo-entry')[index].querySelector('.img-placeholder');
+            container.innerHTML = `
+                <img 
+                    src="${item.url}" 
+                    class="w-full h-auto object-contain block opacity-0 transition-opacity duration-700" 
+                    loading="eager"
+                    onload="this.classList.remove('opacity-0'); this.parentElement.classList.remove('img-placeholder');"
+                    onerror="handleImageError(this, '${item.url}', ${index});"
+                >
+            `;
+        };
 
         window.promptBatchUrls = () => {
             const input = prompt("粘贴新的图片链接列表（每行一个）：");
