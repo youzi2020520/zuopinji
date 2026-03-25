@@ -255,14 +255,43 @@
 
         window.openViewer = (index) => {
             const item = portfolioItems[index];
-            document.getElementById('viewerContent').innerHTML = `<img src="${item.url}" class="max-h-full max-w-full object-contain">`;
+            const viewerContent = document.getElementById('viewerContent');
+            viewerContent.innerHTML = `<img src="${item.url}" class="max-h-full max-w-full object-contain" id="viewerImage">`;
             document.getElementById('viewer').classList.remove('hidden');
             document.body.style.overflow = 'hidden';
+            
+            // 添加鼠标滚轮缩放功能
+            const viewerImage = document.getElementById('viewerImage');
+            let scale = 1;
+            const scaleStep = 0.1;
+            const minScale = 0.5;
+            const maxScale = 3;
+            
+            viewerImage.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                
+                // 根据滚轮方向调整缩放比例
+                if (e.deltaY< 0) {
+                    // 向上滚动：放大
+                    scale = Math.min(scale + scaleStep, maxScale);
+                } else {
+                    // 向下滚动：缩小
+                    scale = Math.max(scale - scaleStep, minScale);
+                }
+                
+                // 应用缩放变换
+                viewerImage.style.transform = `scale(${scale})`;
+            });
         };
 
-        window.closeViewer = () => {
+        window.closeViewer = () =>{
             document.getElementById('viewer').classList.add('hidden');
             document.body.style.overflow = 'auto';
+            // 重置图片缩放
+            const viewerImage = document.getElementById('viewerImage');
+            if (viewerImage) {
+                viewerImage.style.transform = 'scale(1)';
+            }
         };
     </script>
 </body>
