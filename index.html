@@ -260,7 +260,7 @@
             document.getElementById('viewer').classList.remove('hidden');
             document.body.style.overflow = 'hidden';
             
-            // 添加鼠标滚轮缩放功能
+            // 添加鼠标滚轮缩放功能（需要按住特定按键）
             const viewerImage = document.getElementById('viewerImage');
             let scale = 1;
             const scaleStep = 0.1;
@@ -268,19 +268,19 @@
             const maxScale = 3;
             
             viewerImage.addEventListener('wheel', (e) => {
-                e.preventDefault();
-                
-                // 根据滚轮方向调整缩放比例
-                if (e.deltaY< 0) {
-                    // 向上滚动：放大
+                // 检查是否按住Alt键（放大）或Command键（缩小）
+                if (e.altKey) {
+                    e.preventDefault();
+                    // 按住Alt键+滚轮：放大
                     scale = Math.min(scale + scaleStep, maxScale);
-                } else {
-                    // 向下滚动：缩小
+                    viewerImage.style.transform = `scale(${scale})`;
+                } else if (e.metaKey) { // Command键在Mac上是metaKey
+                    e.preventDefault();
+                    // 按住Command键+滚轮：缩小
                     scale = Math.max(scale - scaleStep, minScale);
+                    viewerImage.style.transform = `scale(${scale})`;
                 }
-                
-                // 应用缩放变换
-                viewerImage.style.transform = `scale(${scale})`;
+                // 否则让滚轮事件正常传播（页面滚动）
             });
         };
 
