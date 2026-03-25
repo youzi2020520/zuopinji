@@ -19,7 +19,7 @@ const mimeTypes = {
   '.ttf': 'application/font-ttf',
   '.eot': 'application/vnd.ms-fontobject',
   '.otf': 'application/font-otf',
-  '.svg': 'application/image/svg+xml'
+  '.svg': 'image/svg+xml'
 };
 
 const server = http.createServer((req, res) => {
