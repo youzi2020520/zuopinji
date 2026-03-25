@@ -166,8 +166,9 @@
                         <img 
                             src="${item.url}" 
                             class="w-full h-auto object-contain block opacity-0 transition-opacity duration-700" 
-                            loading="lazy"
+                            loading="eager"
                             onload="this.classList.remove('opacity-0'); this.parentElement.classList.remove('img-placeholder');"
+                            onerror="this.parentElement.innerHTML = '<div class=\"flex items-center justify-center h-full text-white/50\">加载失败</div>';"
                         >
                     </div>
                 </div>
