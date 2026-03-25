@@ -1,0 +1,23 @@
+{
+  "name": "photography-portfolio",
+  "version": "1.0.0",
+  "description": "Photography portfolio website with Vercel deployment",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo 'Build completed'",
+    "start": "node server.js"
+  },
+  "keywords": [
+    "photography",
+    "portfolio",
+    "vercel",
+    "serverless",
+    "nodejs"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": "20.x"
+  }
+}

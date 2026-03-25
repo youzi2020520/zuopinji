@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>摄影作品集 - 云端同步版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        // Vercel API配置
+        const vercelConfig = {
+            apiEndpoint: '/api/gallery', // Vercel API路由
+            appId: typeof __app_id !== 'undefined' ? __app_id : 'portfolio-app'
+        };
+
+        // 简单的认证管理
+        let currentUser = {
+            uid: 'anonymous-' + Date.now()
+        };
+
+        // 挂载核心实例到全局
+        window.vercelApp = { 
+            config: vercelConfig,
+            currentUser
+        };
+
+        // 启动应用逻辑
+        window.startAppLogic = async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const galleryId = urlParams.get('id');
+            
+            if (galleryId) {
+                try {
+                    // 调用Vercel API获取数据
+                    const response = await fetch(`${window.vercelApp.config.apiEndpoint}?id=${galleryId}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        portfolioItems = data.items;
+                        currentSpacing = data.spacing || 128;
+                        enablePreviewMode();
+                    }
+                } catch (e) { 
+                    console.error("Failed to load gallery:", e); 
+                }
+            }
+            
+            renderList();
+            document.getElementById('loading-overlay').style.display = 'none';
+        };
+
+        // 页面加载完成后启动
+        window.addEventListener('load', () => {
+            window.startAppLogic();
+        });
+    </script>
+    <style>
+        body { background-color: #000; color: #fff; -webkit-tap-highlight-color: transparent; overflow-x: hidden; }
+        .glass-dark { background: rgba(10, 10, 10, 0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+        .photo-entry { transition: margin 0.3s ease; width: 100%; }
+        .img-placeholder { background: #111; min-height: 300px; display: flex; align-items: center; justify-content: center; }
+        .action-btn { transition: all 0.2s ease; opacity: 0.7; }
+        @media (hover: hover) { .action-btn { opacity: 0; } .photo-entry:hover .action-btn { opacity: 1; } }
+        ::-webkit-scrollbar { width: 0px; }
+        #loading-overlay { background: black; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
+    </style>
+</head>
+<body class="font-sans antialiased">
+
+    <div id="loading-overlay" class="fixed inset-0">
+        <div class="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+        <p class="text-[10px] tracking-[0.3em] mt-4 opacity-40 uppercase">加载中...</p>
+    </div>
+
+    <nav class="fixed top-0 left-0 right-0 z-50 glass-dark">
+        <div class="max-w-7xl mx-auto px-4 md:px-8">
+            <div class="flex justify-between h-16 md:h-20 items-center">
+                <div class="flex items-center gap-4">
+                    <span class="text-xs md:text-sm font-light tracking-[0.3em] uppercase opacity-50">Portfolio</span>
+                    <div id="spacingTool" class="hidden md:flex items-center gap-3 border-l border-white/10 pl-6">
+                        <input type="range" id="spacingControl" min="0" max="400" value="128" class="w-24" oninput="updateSpacing(this.value)">
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2" id="adminControls">
+                    <button onclick="promptBatchUrls()" class="text-white/40 hover:text-white px-2 py-2 text-[10px] tracking-widest uppercase transition-all">
+                        编辑链接
+                    </button>
+                    <button id="shareBtn" onclick="saveAndShare()" class="bg-white text-black px-6 py-2 rounded-full text-[10px] font-bold tracking-widest transition-all hover:scale-105 uppercase">
+                        分享
+                    </button>
+                </div>
+                
+                <div id="previewBadge" class="hidden text-white/30 text-[10px] tracking-[0.4em] uppercase">
+                    预览模式
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="w-full max-w-5xl mx-auto pt-24 md:pt-32 pb-32 px-0 md:px-6">
+        <div id="portfolioList" class="flex flex-col items-center"></div>
+    </main>
+
+    <div id="viewer" class="fixed inset-0 z-[200] hidden bg-black flex items-center justify-center cursor-zoom-out" onclick="closeViewer()">
+        <div id="viewerContent" class="w-full h-full flex items-center justify-center p-4"></div>
+    </div>
+
+    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 z-[300] bg-white text-black px-8 py-3 rounded-full text-[10px] font-bold tracking-[0.2em] shadow-2xl opacity-0 transition-all duration-500 pointer-events-none uppercase">
+        链接已复制
+    </div>
+
+    <script>
+        const initialUrls = [
+            "https://pic1.imgdb.cn/item/69c247f913399d9f5165b806.png", "https://pic1.imgdb.cn/item/69c247f713399d9f5165b800.png",
+            "https://pic1.imgdb.cn/item/69c247f613399d9f5165b7fd.png", "https://pic1.imgdb.cn/item/69c247f913399d9f5165b805.png",
+            "https://pic1.imgdb.cn/item/69c247f713399d9f5165b7fe.png", "https://pic1.imgdb.cn/item/69c247f813399d9f5165b803.png",
+            "https://pic1.imgdb.cn/item/69c247fb13399d9f5165b80b.png", "https://pic1.imgdb.cn/item/69c247f913399d9f5165b807.png",
+            "https://pic1.imgdb.cn/item/69c247fd13399d9f5165b810.png", "https://pic1.imgdb.cn/item/69c247fd13399d9f5165b80f.png",
+            "https://pic1.imgdb.cn/item/69c247fe13399d9f5165b811.png", "https://pic1.imgdb.cn/item/69c2480013399d9f5165b816.png",
+            "https://pic1.imgdb.cn/item/69c2480113399d9f5165b818.png", "https://pic1.imgdb.cn/item/69c2480213399d9f5165b81b.png",
+            "https://pic1.imgdb.cn/item/69c247fe13399d9f5165b812.png", "https://pic1.imgdb.cn/item/69c2480313399d9f5165b81e.png",
+            "https://pic1.imgdb.cn/item/69c2480413399d9f5165b820.png", "https://pic1.imgdb.cn/item/69c2480613399d9f5165b825.png",
+            "https://pic1.imgdb.cn/item/69c2480813399d9f5165b82c.png", "https://pic1.imgdb.cn/item/69c2480913399d9f5165b82f.png",
+            "https://pic1.imgdb.cn/item/69c2480713399d9f5165b827.png", "https://pic1.imgdb.cn/item/69c2480a13399d9f5165b834.png",
+            "https://pic1.imgdb.cn/item/69c2480b13399d9f5165b836.png", "https://pic1.imgdb.cn/item/69c2480813399d9f5165b82b.png",
+            "https://pic1.imgdb.cn/item/69c2480713399d9f5165b828.png", "https://pic1.imgdb.cn/item/69c2480a13399d9f5165b831.png",
+            "https://pic1.imgdb.cn/item/69c2480c13399d9f5165b837.png", "https://pic1.imgdb.cn/item/69c2480c13399d9f5165b838.png",
+            "https://pic1.imgdb.cn/item/69c2480913399d9f5165b830.png", "https://pic1.imgdb.cn/item/69c2480d13399d9f5165b839.png",
+            "https://pic1.imgdb.cn/item/69c2480e13399d9f5165b83a.png", "https://pic1.imgdb.cn/item/69c2481113399d9f5165b841.png",
+            "https://pic1.imgdb.cn/item/69c2481313399d9f5165b843.png", "https://pic1.imgdb.cn/item/69c2481013399d9f5165b840.png",
+            "https://pic1.imgdb.cn/item/69c2481013399d9f5165b83f.png", "https://pic1.imgdb.cn/item/69c24cae13399d9f5165d451.png",
+            "https://pic1.imgdb.cn/item/69c2481713399d9f5165b84c.png", "https://pic1.imgdb.cn/item/69c2481c13399d9f5165b85b.png",
+            "https://pic1.imgdb.cn/item/69c2481813399d9f5165b84d.png", "https://pic1.imgdb.cn/item/69c2481a13399d9f5165b855.png",
+            "https://pic1.imgdb.cn/item/69c2481a13399d9f5165b852.png", "https://pic1.imgdb.cn/item/69c24d3213399d9f5165d539.png",
+            "https://pic1.imgdb.cn/item/69c2481c13399d9f5165b858.png", "https://pic1.imgdb.cn/item/69c2481c13399d9f5165b85a.png",
+            "https://pic1.imgdb.cn/item/69c2481d13399d9f5165b85d.png", "https://pic1.imgdb.cn/item/69c2481c13399d9f5165b85c.png",
+            "https://pic1.imgdb.cn/item/69c2481c13399d9f5165b859.png", "https://pic1.imgdb.cn/item/69c2488c13399d9f5165b90f.png",
+            "https://pic1.imgdb.cn/item/69c2488c13399d9f5165b910.png", "https://pic1.imgdb.cn/item/69c2488c13399d9f5165b909.png",
+            "https://pic1.imgdb.cn/item/69c2488c13399d9f5165b911.png", "https://pic1.imgdb.cn/item/69c2488c13399d9f5165b90e.png",
+            "https://pic1.imgdb.cn/item/69c2488c13399d9f5165b90b.png", "https://pic1.imgdb.cn/item/69c2488c13399d9f5165b90d.png",
+            "https://pic1.imgdb.cn/item/69c2488c13399d9f5165b90c.png", "https://pic1.imgdb.cn/item/69c2488d13399d9f5165b912.png",
+            "https://pic1.imgdb.cn/item/69c2488e13399d9f5165b918.png", "https://pic1.imgdb.cn/item/69c2488d13399d9f5165b915.png",
+            "https://pic1.imgdb.cn/item/69c2488d13399d9f5165b914.png", "https://pic1.imgdb.cn/item/69c2488d13399d9f5165b913.png",
+            "https://pic1.imgdb.cn/item/69c2489013399d9f5165b92a.png", "https://pic1.imgdb.cn/item/69c2489013399d9f5165b928.png",
+            "https://pic1.imgdb.cn/item/69c2488e13399d9f5165b919.png", "https://pic1.imgdb.cn/item/69c2488e13399d9f5165b91a.png",
+            "https://pic1.imgdb.cn/item/69c2488f13399d9f5165b91f.png", "https://pic1.imgdb.cn/item/69c2489113399d9f5165b932.png",
+            "https://pic1.imgdb.cn/item/69c2489113399d9f5165b92f.png", "https://pic1.imgdb.cn/item/69c2489313399d9f5165b93c.png",
+            "https://pic1.imgdb.cn/item/69c2488f13399d9f5165b91d.png", "https://pic1.imgdb.cn/item/69c2488f13399d9f5165b926.png",
+            "https://pic1.imgdb.cn/item/69c2488f13399d9f5165b924.png", "https://pic1.imgdb.cn/item/69c2488f13399d9f5165b91e.png",
+            "https://pic1.imgdb.cn/item/69c2489113399d9f5165b931.png", "https://pic1.imgdb.cn/item/69c2489113399d9f5165b930.png",
+            "https://pic1.imgdb.cn/item/69c2492913399d9f5165ba98.png", "https://pic1.imgdb.cn/item/69c248c713399d9f5165b99b.png"
+        ];
+
+        let portfolioItems = initialUrls.map(url => ({ url }));
+        let currentSpacing = 128;
+        let isPreviewMode = false;
+
+        function enablePreviewMode() {
+            isPreviewMode = true;
+            document.getElementById('adminControls').style.display = 'none';
+            document.getElementById('spacingTool').style.display = 'none';
+            document.getElementById('previewBadge').classList.remove('hidden');
+        }
+
+        function renderList() {
+            const container = document.getElementById('portfolioList');
+            container.innerHTML = portfolioItems.map((item, index) => `
+                <div class="photo-entry flex flex-col items-center" style="margin-bottom: ${window.innerWidth > 768 ? currentSpacing : 40}px">
+                    <div class="relative w-full max-w-4xl overflow-hidden img-placeholder" onclick="openViewer(${index})">
+                        <img 
+                            src="${item.url}" 
+                            class="w-full h-auto object-contain block opacity-0 transition-opacity duration-700" 
+                            loading="lazy"
+                            onload="this.classList.remove('opacity-0'); this.parentElement.classList.remove('img-placeholder');"
+                        >
+                        ${!isPreviewMode ? `
+                        <button onclick="event.stopPropagation(); deleteItem(${index})" class="action-btn absolute top-4 right-4 w-10 h-10 bg-black/60 text-white rounded-full flex items-center justify-center">
+                            <i class="fas fa-times text-xs"></i>
+                        </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        window.deleteItem = (index) => {
+            portfolioItems.splice(index, 1);
+            renderList();
+        };
+
+        window.updateSpacing = (val) => {
+            currentSpacing = val;
+            document.querySelectorAll('.photo-entry').forEach(el => {
+                if (window.innerWidth > 768) el.style.marginBottom = `${val}px`;
+            });
+        };
+
+        window.promptBatchUrls = () => {
+            const input = prompt("粘贴新的图片链接列表（每行一个）：");
+            if (input) {
+                const urls = input.split('\n').map(u => u.trim()).filter(u => u);
+                portfolioItems = urls.map(url => ({ url }));
+                renderList();
+            }
+        };
+
+        window.saveAndShare = async () => {
+            const btn = document.getElementById('shareBtn');
+            const originalText = btn.innerText;
+            btn.innerText = "保存中...";
+            btn.disabled = true;
+
+            const galleryId = crypto.randomUUID();
+            try {
+                // 调用Vercel API保存数据
+                const response = await fetch(window.vercelApp.config.apiEndpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        galleryId: galleryId,
+                        items: portfolioItems,
+                        spacing: parseInt(currentSpacing),
+                        owner: window.vercelApp.currentUser.uid,
+                        createdAt: new Date().toISOString()
+                    })
+                });
+
+                if (response.ok) {
+                    const shareUrl = `${window.location.origin}${window.location.pathname}?id=${galleryId}`;
+                    copyToClipboard(shareUrl);
+                    showToast("链接已复制到剪贴板");
+                } else {
+                    throw new Error('保存失败');
+                }
+            } catch (e) {
+                console.error("Save failed:", e);
+                alert("保存失败，请稍后重试。");
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        };
+
+        function copyToClipboard(text) {
+            const el = document.createElement('textarea');
+            el.value = text;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+        }
+
+        window.openViewer = (index) => {
+            const item = portfolioItems[index];
+            document.getElementById('viewerContent').innerHTML = `<img src="${item.url}" class="max-h-full max-w-full object-contain">`;
+            document.getElementById('viewer').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        };
+
+        window.closeViewer = () => {
+            document.getElementById('viewer').classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        };
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg; t.classList.replace('opacity-0', 'opacity-100');
+            setTimeout(() => t.classList.replace('opacity-100', 'opacity-0'), 3000);
+        }
+    </script>
+</body>
+</html>
