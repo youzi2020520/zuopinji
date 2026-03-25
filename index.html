@@ -313,22 +313,24 @@
                 updateImageTransform();
             });
             
-            // 点击图片：按照200%展示
-            viewerImage.addEventListener('click', (e) =>{
+            // 双击图片：按照最大视窗展示
+            viewerImage.addEventListener('dblclick', (e) => {
                 e.stopPropagation();
                 
                 if (scale > 1) {
-                    // 当前是放大状态，点击后恢复到200%
-                    scale = doubleScale;
+                    // 当前是放大状态，双击后缩小至原尺寸
+                    scale = 1;
+                    translateX = 0;
+                    translateY = 0;
                 } else {
-                    // 当前是正常状态，点击后放大到200%
-                    scale = doubleScale;
+                    // 当前是正常状态，双击后放大到最大视窗
+                    scale = maxScale;
                 }
                 
                 updateImageTransform();
             });
             
-            // Alt键检测（长按出现抓手）
+            // Alt键检测
             document.addEventListener('keydown', (e) => {
                 if (e.altKey) {
                     isAltPressed = true;
@@ -343,8 +345,10 @@
                 }
             });
             
-            // 鼠标按下开始拖动（不需要按住Alt键）
+            // 鼠标按下开始拖动（需要Alt键+鼠标左键组合）
             viewerImage.addEventListener('mousedown', (e) => {
+                if (!isAltPressed) return; // 只有按住Alt键时才能拖动
+                
                 isDragging = true;
                 startX = e.clientX - translateX;
                 startY = e.clientY - translateY;
