@@ -261,7 +261,7 @@
             viewer.classList.remove('hidden');
             document.body.style.overflow = 'hidden';
             
-            // 添加鼠标滚轮缩放和拖动功能
+            // 添加完整的图片查看器交互功能
             const viewerImage = document.getElementById('viewerImage');
             let scale = 1;
             const scaleStep = 0.1;
@@ -272,22 +272,76 @@
             let isDragging = false;
             let startX, startY;
             let translateX = 0, translateY = 0;
+            let isAltPressed = false;
+            
+            // 更新鼠标指针样式
+            function updateCursor() {
+                if (isAltPressed) {
+                    viewerImage.style.cursor = 'grab';
+                } else if (scale > 1) {
+                    viewerImage.style.cursor = 'zoom-out';
+                } else {
+                    viewerImage.style.cursor = 'zoom-in';
+                }
+            }
+            
+            // 更新图片变换
+            function updateImageTransform() {
+                viewerImage.style.transform = `scale(${scale}) translate(${translateX}px, ${translateY}px)`;
+                updateCursor();
+            }
             
             // 鼠标滚轮缩放
             viewerImage.addEventListener('wheel', (e) => {
                 e.preventDefault();
                 
                 if (e.deltaY< 0) {
+                    // 向上滚动：放大
                     scale = Math.min(scale + scaleStep, maxScale);
                 } else {
+                    // 向下滚动：缩小
                     scale = Math.max(scale - scaleStep, minScale);
                 }
                 
                 updateImageTransform();
             });
             
-            // 鼠标按下开始拖动
-            viewerImage.addEventListener('mousedown', (e) =>{
+            // 点击图片：自适应全部展示
+            viewerImage.addEventListener('click', (e) =>{
+                e.stopPropagation();
+                
+                if (scale > 1) {
+                    // 当前是放大状态，点击后自适应全部展示
+                    scale = 1;
+                    translateX = 0;
+                    translateY = 0;
+                } else {
+                    // 当前是正常状态，点击后放大到最大视图
+                    scale = maxScale;
+                }
+                
+                updateImageTransform();
+            });
+            
+            // Alt键检测
+            document.addEventListener('keydown', (e) => {
+                if (e.altKey) {
+                    isAltPressed = true;
+                    updateCursor();
+                }
+            });
+            
+            document.addEventListener('keyup', (e) => {
+                if (!e.altKey) {
+                    isAltPressed = false;
+                    updateCursor();
+                }
+            });
+            
+            // 鼠标按下开始拖动（只有按住Alt键时才能拖动）
+            viewerImage.addEventListener('mousedown', (e) => {
+                if (!isAltPressed) return;
+                
                 isDragging = true;
                 startX = e.clientX - translateX;
                 startY = e.clientY - translateY;
@@ -306,13 +360,11 @@
             // 鼠标释放结束拖动
             document.addEventListener('mouseup', () => {
                 isDragging = false;
-                viewerImage.style.cursor = 'grab';
+                updateCursor();
             });
             
-            // 更新图片变换
-            function updateImageTransform() {
-                viewerImage.style.transform = `scale(${scale}) translate(${translateX}px, ${translateY}px)`;
-            }
+            // 初始化
+            updateImageTransform();
         };
 
         window.closeViewer = () =>{
