@@ -16,6 +16,14 @@
       "dest": "/api/$1"
     },
     {
+      "src": "/favicon-(.*)\\.png",
+      "dest": "/favicon-$1.png"
+    },
+    {
+      "src": "/favicon\\.svg",
+      "dest": "/favicon.svg"
+    },
+    {
       "src": "/(.*)",
       "dest": "/index.html"
     }
