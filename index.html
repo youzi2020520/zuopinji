@@ -257,40 +257,72 @@
             const item = portfolioItems[index];
             const viewerContent = document.getElementById('viewerContent');
             viewerContent.innerHTML = `<img src="${item.url}" class="max-h-full max-w-full object-contain" id="viewerImage">`;
-            document.getElementById('viewer').classList.remove('hidden');
+            const viewer = document.getElementById('viewer');
+            viewer.classList.remove('hidden');
             document.body.style.overflow = 'hidden';
             
-            // 添加鼠标滚轮缩放功能（主流实现方式）
+            // 添加鼠标滚轮缩放和拖动功能
             const viewerImage = document.getElementById('viewerImage');
             let scale = 1;
             const scaleStep = 0.1;
             const minScale = 0.5;
             const maxScale = 3;
             
+            // 拖动相关变量
+            let isDragging = false;
+            let startX, startY;
+            let translateX = 0, translateY = 0;
+            
+            // 鼠标滚轮缩放
             viewerImage.addEventListener('wheel', (e) => {
                 e.preventDefault();
                 
-                // 主流实现：向上滚动放大，向下滚动缩小
                 if (e.deltaY< 0) {
-                    // 向上滚动：放大
                     scale = Math.min(scale + scaleStep, maxScale);
                 } else {
-                    // 向下滚动：缩小
                     scale = Math.max(scale - scaleStep, minScale);
                 }
                 
-                // 应用缩放变换
-                viewerImage.style.transform = `scale(${scale})`;
+                updateImageTransform();
             });
+            
+            // 鼠标按下开始拖动
+            viewerImage.addEventListener('mousedown', (e) =>{
+                isDragging = true;
+                startX = e.clientX - translateX;
+                startY = e.clientY - translateY;
+                viewerImage.style.cursor = 'grabbing';
+            });
+            
+            // 鼠标移动拖动
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                
+                translateX = e.clientX - startX;
+                translateY = e.clientY - startY;
+                updateImageTransform();
+            });
+            
+            // 鼠标释放结束拖动
+            document.addEventListener('mouseup', () => {
+                isDragging = false;
+                viewerImage.style.cursor = 'grab';
+            });
+            
+            // 更新图片变换
+            function updateImageTransform() {
+                viewerImage.style.transform = `scale(${scale}) translate(${translateX}px, ${translateY}px)`;
+            }
         };
 
         window.closeViewer = () =>{
-            document.getElementById('viewer').classList.add('hidden');
+            const viewer = document.getElementById('viewer');
+            viewer.classList.add('hidden');
             document.body.style.overflow = 'auto';
-            // 重置图片缩放
+            // 重置图片状态
             const viewerImage = document.getElementById('viewerImage');
             if (viewerImage) {
-                viewerImage.style.transform = 'scale(1)';
+                viewerImage.style.transform = 'scale(1) translate(0, 0)';
             }
         };
     </script>
