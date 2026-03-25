@@ -269,6 +269,7 @@
             const scaleStep = 0.1;
             const minScale = 0.5;
             const maxScale = 3;
+            const doubleScale = 2; // 200% 展示
             
             // 拖动相关变量
             let isDragging = false;
@@ -278,9 +279,11 @@
             
             // 更新鼠标指针样式
             function updateCursor() {
-                if (isAltPressed) {
+                if (isDragging) {
+                    viewerImage.style.cursor = 'grabbing';
+                } else if (isAltPressed) {
                     viewerImage.style.cursor = 'grab';
-                } else if (scale > 1) {
+                } else if (scale > doubleScale) {
                     viewerImage.style.cursor = 'zoom-out';
                 } else {
                     viewerImage.style.cursor = 'zoom-in';
@@ -310,24 +313,22 @@
                 updateImageTransform();
             });
             
-            // 点击图片：自适应全部展示
+            // 点击图片：按照200%展示
             viewerImage.addEventListener('click', (e) =>{
                 e.stopPropagation();
                 
                 if (scale > 1) {
-                    // 当前是放大状态，点击后自适应全部展示
-                    scale = 1;
-                    translateX = 0;
-                    translateY = 0;
+                    // 当前是放大状态，点击后恢复到200%
+                    scale = doubleScale;
                 } else {
-                    // 当前是正常状态，点击后放大到最大视图
-                    scale = maxScale;
+                    // 当前是正常状态，点击后放大到200%
+                    scale = doubleScale;
                 }
                 
                 updateImageTransform();
             });
             
-            // Alt键检测
+            // Alt键检测（长按出现抓手）
             document.addEventListener('keydown', (e) => {
                 if (e.altKey) {
                     isAltPressed = true;
@@ -342,14 +343,12 @@
                 }
             });
             
-            // 鼠标按下开始拖动（只有按住Alt键时才能拖动）
+            // 鼠标按下开始拖动（不需要按住Alt键）
             viewerImage.addEventListener('mousedown', (e) => {
-                if (!isAltPressed) return;
-                
                 isDragging = true;
                 startX = e.clientX - translateX;
                 startY = e.clientY - translateY;
-                viewerImage.style.cursor = 'grabbing';
+                updateCursor();
             });
             
             // 鼠标移动拖动
