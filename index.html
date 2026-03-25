@@ -7,45 +7,67 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
-        // Vercel API配置
-        const vercelConfig = {
-            apiEndpoint: '/api/gallery', // Vercel API路由
-            appId: typeof __app_id !== 'undefined' ? __app_id : 'portfolio-app'
-        };
-
-        // 简单的认证管理
-        let currentUser = {
-            uid: 'anonymous-' + Date.now()
-        };
-
-        // 挂载核心实例到全局
-        window.vercelApp = { 
-            config: vercelConfig,
-            currentUser
-        };
+        // 点击计数和编辑按钮显示逻辑
+        let clickCount = 0;
+        let clickTimer = null;
 
         // 启动应用逻辑
-        window.startAppLogic = async () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const galleryId = urlParams.get('id');
-            
-            if (galleryId) {
-                try {
-                    // 调用Vercel API获取数据
-                    const response = await fetch(`${window.vercelApp.config.apiEndpoint}?id=${galleryId}`);
-                    if (response.ok) {
-                        const data = await response.json();
-                        portfolioItems = data.items;
-                        currentSpacing = data.spacing || 128;
-                        enablePreviewMode();
-                    }
-                } catch (e) { 
-                    console.error("Failed to load gallery:", e); 
-                }
-            }
-            
+        window.startAppLogic = () => {
             renderList();
             document.getElementById('loading-overlay').style.display = 'none';
+            
+            // 添加点击三下显示编辑按钮的逻辑（在右上角空白区域）
+            document.addEventListener('click', (e) => {
+                // 忽略点击图片查看器和编辑按钮
+                if (e.target.closest('#viewer') || e.target.closest('#editButton')) {
+                    return;
+                }
+                
+                // 检查是否点击在右上角区域（距离右边和顶部200px范围内）
+                const rect = document.body.getBoundingClientRect();
+                const isTopRightArea = e.clientX > rect.width - 200 && e.clientY< 200;
+                
+                if (!isTopRightArea) {
+                    return; // 只响应右上角区域的点击
+                }
+                
+                clickCount++;
+                
+                // 清除之前的计时器
+                if (clickTimer) {
+                    clearTimeout(clickTimer);
+                }
+                
+                // 设置新的计时器（3秒内必须点击3次）
+                clickTimer = setTimeout(() =>{
+                    clickCount = 0;
+                }, 3000);
+                
+                // 如果点击了3次，显示编辑按钮
+                if (clickCount === 3) {
+                    const editButton = document.getElementById('editButton');
+                    editButton.style.opacity = '1';
+                    editButton.style.pointerEvents = 'auto';
+                    
+                    // 3秒后自动隐藏
+                    setTimeout(() => {
+                        editButton.style.opacity = '0';
+                        editButton.style.pointerEvents = 'none';
+                    }, 3000);
+                    
+                    clickCount = 0;
+                    clearTimeout(clickTimer);
+                }
+            });
+            
+            // 点击其他地方隐藏编辑按钮
+            document.addEventListener('click', (e) => {
+                const editButton = document.getElementById('editButton');
+                if (!e.target.closest('#editButton') && editButton.style.opacity === '1') {
+                    editButton.style.opacity = '0';
+                    editButton.style.pointerEvents = 'none';
+                }
+            });
         };
 
         // 页面加载完成后启动
@@ -71,33 +93,14 @@
         <p class="text-[10px] tracking-[0.3em] mt-4 opacity-40 uppercase">加载中...</p>
     </div>
 
-    <nav class="fixed top-0 left-0 right-0 z-50 glass-dark">
-        <div class="max-w-7xl mx-auto px-4 md:px-8">
-            <div class="flex justify-between h-16 md:h-20 items-center">
-                <div class="flex items-center gap-4">
-                    <span class="text-xs md:text-sm font-light tracking-[0.3em] uppercase opacity-50">Portfolio</span>
-                    <div id="spacingTool" class="hidden md:flex items-center gap-3 border-l border-white/10 pl-6">
-                        <input type="range" id="spacingControl" min="0" max="400" value="128" class="w-24" oninput="updateSpacing(this.value)">
-                    </div>
-                </div>
+    <!-- 隐藏的编辑按钮，点击三下显示 -->
+    <div id="editButton" class="fixed top-4 right-4 z-50 opacity-0 pointer-events-none transition-opacity duration-300">
+        <button onclick="promptBatchUrls()" class="bg-black/60 text-white px-4 py-2 rounded-full text-[10px] font-bold tracking-widest transition-all hover:scale-105 uppercase">
+            编辑链接
+        </button>
+    </div>
 
-                <div class="flex items-center gap-2" id="adminControls">
-                    <button onclick="promptBatchUrls()" class="text-white/40 hover:text-white px-2 py-2 text-[10px] tracking-widest uppercase transition-all">
-                        编辑链接
-                    </button>
-                    <button id="shareBtn" onclick="saveAndShare()" class="bg-white text-black px-6 py-2 rounded-full text-[10px] font-bold tracking-widest transition-all hover:scale-105 uppercase">
-                        分享
-                    </button>
-                </div>
-                
-                <div id="previewBadge" class="hidden text-white/30 text-[10px] tracking-[0.4em] uppercase">
-                    预览模式
-                </div>
-            </div>
-        </div>
-    </nav>
-
-    <main class="w-full max-w-5xl mx-auto pt-24 md:pt-32 pb-32 px-0 md:px-6">
+    <main class="w-full max-w-5xl mx-auto pt-8 pb-32 px-0 md:px-6" id="mainContent">
         <div id="portfolioList" class="flex flex-col items-center"></div>
     </main>
 
@@ -105,9 +108,7 @@
         <div id="viewerContent" class="w-full h-full flex items-center justify-center p-4"></div>
     </div>
 
-    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 z-[300] bg-white text-black px-8 py-3 rounded-full text-[10px] font-bold tracking-[0.2em] shadow-2xl opacity-0 transition-all duration-500 pointer-events-none uppercase">
-        链接已复制
-    </div>
+
 
     <script>
         const initialUrls = [
@@ -152,48 +153,23 @@
         ];
 
         let portfolioItems = initialUrls.map(url => ({ url }));
-        let currentSpacing = 128;
-        let isPreviewMode = false;
-
-        function enablePreviewMode() {
-            isPreviewMode = true;
-            document.getElementById('adminControls').style.display = 'none';
-            document.getElementById('spacingTool').style.display = 'none';
-            document.getElementById('previewBadge').classList.remove('hidden');
-        }
+        const currentSpacing = 20;
 
         function renderList() {
             const container = document.getElementById('portfolioList');
             container.innerHTML = portfolioItems.map((item, index) => `
-                <div class="photo-entry flex flex-col items-center" style="margin-bottom: ${window.innerWidth > 768 ? currentSpacing : 40}px">
-                    <div class="relative w-full max-w-4xl overflow-hidden img-placeholder" onclick="openViewer(${index})">
+                <div class="photo-entry flex flex-col items-center" style="margin-bottom: ${currentSpacing}px">
+                    <div class="relative w-full max-w-4xl overflow-hidden img-placeholder" ondblclick="openViewer(${index})">
                         <img 
                             src="${item.url}" 
                             class="w-full h-auto object-contain block opacity-0 transition-opacity duration-700" 
                             loading="lazy"
                             onload="this.classList.remove('opacity-0'); this.parentElement.classList.remove('img-placeholder');"
                         >
-                        ${!isPreviewMode ? `
-                        <button onclick="event.stopPropagation(); deleteItem(${index})" class="action-btn absolute top-4 right-4 w-10 h-10 bg-black/60 text-white rounded-full flex items-center justify-center">
-                            <i class="fas fa-times text-xs"></i>
-                        </button>
-                        ` : ''}
                     </div>
                 </div>
             `).join('');
         }
-
-        window.deleteItem = (index) => {
-            portfolioItems.splice(index, 1);
-            renderList();
-        };
-
-        window.updateSpacing = (val) => {
-            currentSpacing = val;
-            document.querySelectorAll('.photo-entry').forEach(el => {
-                if (window.innerWidth > 768) el.style.marginBottom = `${val}px`;
-            });
-        };
 
         window.promptBatchUrls = () => {
             const input = prompt("粘贴新的图片链接列表（每行一个）：");
@@ -203,54 +179,6 @@
                 renderList();
             }
         };
-
-        window.saveAndShare = async () => {
-            const btn = document.getElementById('shareBtn');
-            const originalText = btn.innerText;
-            btn.innerText = "保存中...";
-            btn.disabled = true;
-
-            const galleryId = crypto.randomUUID();
-            try {
-                // 调用Vercel API保存数据
-                const response = await fetch(window.vercelApp.config.apiEndpoint, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        galleryId: galleryId,
-                        items: portfolioItems,
-                        spacing: parseInt(currentSpacing),
-                        owner: window.vercelApp.currentUser.uid,
-                        createdAt: new Date().toISOString()
-                    })
-                });
-
-                if (response.ok) {
-                    const shareUrl = `${window.location.origin}${window.location.pathname}?id=${galleryId}`;
-                    copyToClipboard(shareUrl);
-                    showToast("链接已复制到剪贴板");
-                } else {
-                    throw new Error('保存失败');
-                }
-            } catch (e) {
-                console.error("Save failed:", e);
-                alert("保存失败，请稍后重试。");
-            } finally {
-                btn.innerText = originalText;
-                btn.disabled = false;
-            }
-        };
-
-        function copyToClipboard(text) {
-            const el = document.createElement('textarea');
-            el.value = text;
-            document.body.appendChild(el);
-            el.select();
-            document.execCommand('copy');
-            document.body.removeChild(el);
-        }
 
         window.openViewer = (index) => {
             const item = portfolioItems[index];
@@ -263,12 +191,6 @@
             document.getElementById('viewer').classList.add('hidden');
             document.body.style.overflow = 'auto';
         };
-
-        function showToast(msg) {
-            const t = document.getElementById('toast');
-            t.innerText = msg; t.classList.replace('opacity-0', 'opacity-100');
-            setTimeout(() => t.classList.replace('opacity-100', 'opacity-0'), 3000);
-        }
     </script>
 </body>
 </html>
