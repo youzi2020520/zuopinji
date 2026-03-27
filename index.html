@@ -18,6 +18,7 @@
 
         // 启动应用逻辑
         window.startAppLogic = () => {
+            renderNav();
             renderList();
             document.getElementById('loading-overlay').style.display = 'none';
             
@@ -101,6 +102,10 @@
         <p class="text-[10px] tracking-[0.3em] mt-4 opacity-40 uppercase">加载中...</p>
     </div>
 
+    <!-- 侧边导航 -->
+    <div id="leftNav" class="fixed left-0 top-1/2 -translate-y-1/2 z-[100] flex flex-col gap-6 pl-0">
+    </div>    
+
     <!-- 隐藏的编辑按钮，点击三下显示 -->
     <div id="editButton" class="fixed top-4 right-4 z-50 opacity-0 pointer-events-none transition-opacity duration-300">
         <button onclick="promptBatchUrls()" class="bg-black/60 text-white px-4 py-2 rounded-full text-[10px] font-bold tracking-widest transition-all hover:scale-105 uppercase">
@@ -168,6 +173,54 @@
 
         let portfolioItems = initialUrls.map(url => ({ url }));
         const currentSpacing = 20;
+
+        const navItems = [
+            { id: 1, title: '01 大屏端', targetIndex: 6 },  // 第 7 页 (索引 6)
+            { id: 2, title: '02 移动端', targetIndex: 28 }, // 第 29 页 (索引 28)
+            { id: 3, title: '03 B端', targetIndex: 49 },   // 第 50 页 (索引 49)
+            { id: 4, title: '04 AI开发', targetIndex: 73 }  // 第 74 页 (索引 73)
+        ];
+
+        let activeNavIndex = -1; // 默认都不选中
+
+        function renderNav() {
+            const navContainer = document.getElementById('leftNav');
+            if (!navContainer) return;
+
+            navContainer.innerHTML = navItems.map((item, index) => {
+                const isActive = index === activeNavIndex;
+                
+                // 线条：默认短条。选中时100%不透明，未选中时50%不透明。悬浮时都会变长(w-16)且100%不透明。
+                const lineClass = isActive ? 'w-8 opacity-100' : 'w-8 opacity-50';
+                
+                // 文字：默认隐藏。悬浮时均显示。
+                const textClass = 'opacity-0 -translate-x-4 pointer-events-none';
+                
+                return `
+                    <div class="flex items-center cursor-pointer group h-8 pl-0 w-48" onclick="selectNav(${index})">
+                        <div class="h-[2px] bg-white transition-all duration-300 ease-out ${lineClass} group-hover:w-16 group-hover:opacity-100"></div>
+                        <span class="ml-4 text-white text-sm font-medium tracking-widest transition-all duration-300 ease-out whitespace-nowrap ${textClass} group-hover:opacity-100 group-hover:translate-x-0">
+                            ${item.title}
+                        </span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        window.selectNav = (index) => {
+            activeNavIndex = index;
+            renderNav();
+            
+            // 滚动到对应的图片
+            const targetIndex = navItems[index].targetIndex;
+            const entries = document.querySelectorAll('.photo-entry');
+            if (entries[targetIndex]) {
+                const yOffset = -20; // 适当的顶部留白
+                const element = entries[targetIndex];
+                const y = element.getBoundingClientRect().top + window.scrollY + yOffset;
+                window.scrollTo({ top: y, behavior: 'smooth' });
+            }
+        };
 
         function renderList() {
             const container = document.getElementById('portfolioList');
