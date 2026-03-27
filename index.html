@@ -20,8 +20,11 @@
         window.startAppLogic = () => {
             renderNav();
             renderList();
-            document.getElementById('loading-overlay').style.display = 'none';
             
+            const loadingOverlay = document.getElementById('loading-overlay');
+            if (loadingOverlay) loadingOverlay.style.display = 'none';
+            
+            playIntroAnimation();
             // 添加点击三下显示编辑按钮的逻辑（在右上角空白区域）
             document.addEventListener('click', (e) => {
                 // 忽略点击图片查看器和编辑按钮
@@ -76,6 +79,54 @@
             });
         };
 
+      function playIntroAnimation() {
+            const digits = document.querySelectorAll('.intro-digit');
+            const title = document.getElementById('intro-title');
+            const textContainer = document.getElementById('intro-text-container');
+            const introTop = document.getElementById('intro-top');
+            const introBottom = document.getElementById('intro-bottom');
+            const introAnimation = document.getElementById('intro-animation');
+
+            if (!introAnimation) return;
+
+            let delay = 300;
+            
+            // 2026 单数出来
+            digits.forEach((digit, index) => {
+                setTimeout(() => {
+                    digit.classList.remove('opacity-0', 'translate-y-4');
+                }, delay + index * 300);
+            });
+
+            delay += digits.length * 300 + 400;
+
+            // 紧接着出现王磊 UI/UX作品集
+            setTimeout(() => {
+                title.classList.remove('opacity-0', 'translate-y-4');
+            }, delay);
+
+            delay += 500 + 1500; // 过渡 500ms + 停留 1.5s 后文字消失
+
+            // 文字消失
+            setTimeout(() => {
+                textContainer.classList.add('opacity-0');
+            }, delay);
+
+            delay += 500; // 等待文字淡出 500ms
+
+            // 屏幕中心上下分为两个部分同时往上往下移动
+            setTimeout(() => {
+                introTop.classList.add('-translate-y-full');
+                introBottom.classList.add('translate-y-full');
+            }, delay);
+
+            delay += 1000; // 等待移动完毕 1000ms
+
+            // 动画结束
+            setTimeout(() => {
+                introAnimation.remove();
+            }, delay);
+        }    
         // 页面加载完成后启动
         window.addEventListener('load', () => {
             window.startAppLogic();
@@ -96,6 +147,23 @@
     </style>
 </head>
 <body class="font-sans antialiased">
+    
+ <!-- 开屏动画 -->
+    <div id="intro-animation" class="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden pointer-events-auto">
+        <div id="intro-top" class="absolute top-0 left-0 w-full h-1/2 bg-black transition-transform duration-1000 ease-in-out"></div>
+        <div id="intro-bottom" class="absolute bottom-0 left-0 w-full h-1/2 bg-black transition-transform duration-1000 ease-in-out"></div>
+        <div id="intro-text-container" class="relative z-10 flex flex-col items-center justify-center text-white transition-opacity duration-500">
+            <div class="text-4xl md:text-6xl font-bold tracking-[0.2em] mb-4 flex justify-center ml-[0.2em]">
+                <span class="intro-digit inline-block opacity-0 translate-y-4 transition-all duration-300">2</span>
+                <span class="intro-digit inline-block opacity-0 translate-y-4 transition-all duration-300">0</span>
+                <span class="intro-digit inline-block opacity-0 translate-y-4 transition-all duration-300">2</span>
+                <span class="intro-digit inline-block opacity-0 translate-y-4 transition-all duration-300">6</span>
+            </div>
+            <div id="intro-title" class="text-lg md:text-xl font-light tracking-[0.3em] opacity-0 translate-y-4 transition-all duration-500">
+                王磊 UI/UX作品集
+            </div>
+        </div>
+    </div>
 
     <div id="loading-overlay" class="fixed inset-0">
         <div class="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
