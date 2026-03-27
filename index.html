@@ -9,6 +9,8 @@
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Vercount 统计 (不蒜子替代方案) -->
+    <script defer src="https://vercount.one/js"></script>
     <script>
         // 点击计数和编辑按钮显示逻辑
         let clickCount = 0;
@@ -106,9 +108,15 @@
         </button>
     </div>
 
-    <main class="w-full max-w-5xl mx-auto pt-8 pb-32 px-0 md:px-6" id="mainContent">
+    <main class="w-full max-w-5xl mx-auto pt-8 pb-16 px-0 md:px-6" id="mainContent">
         <div id="portfolioList" class="flex flex-col items-center"></div>
     </main>
+
+    <footer class="w-full pb-12 flex justify-center items-center text-white/50 text-sm tracking-widest">
+        <span id="busuanzi_container_site_pv" style="display:none;">
+            总访问量： <span id="busuanzi_value_site_pv" class="font-mono ml-1 text-base"></span>
+        </span>
+    </footer>
 
     <div id="viewer" class="fixed inset-0 z-[200] hidden bg-black flex items-center justify-center cursor-zoom-out" onclick="closeViewer()">
         <div id="viewerContent" class="w-full h-full flex items-center justify-center p-4"></div>
