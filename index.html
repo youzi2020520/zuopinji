@@ -21,6 +21,14 @@
             renderList();
             document.getElementById('loading-overlay').style.display = 'none';
             
+            // 显示真实访问量
+            window.addEventListener('vercount:ready', (e) => {
+                const vercountValue = document.getElementById('vercount_value');
+                if (vercountValue) {
+                    vercountValue.textContent = e.detail.count;
+                }
+            });
+            
             // 添加点击三下显示编辑按钮的逻辑（在右上角空白区域）
             document.addEventListener('click', (e) => {
                 // 忽略点击图片查看器和编辑按钮
@@ -113,9 +121,9 @@
     </main>
 
     <footer class="w-full pb-12 flex justify-center items-center text-white/50 text-sm tracking-widest">
-        <span id="busuanzi_container_site_pv" style="display:none;">
-            总访问量： <span id="busuanzi_value_site_pv" class="font-mono ml-1 text-base"></span>
-        </span>
+        <div id="vercount_container">
+            总访问量： <span id="vercount_value" class="font-mono ml-1 text-base"></span>
+        </div>
     </footer>
 
     <div id="viewer" class="fixed inset-0 z-[200] hidden bg-black flex items-center justify-center cursor-zoom-out" onclick="closeViewer()">
